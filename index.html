@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BioKaizen Solutions — Nuestras Apps</title>
+<meta name="description" content="Descubre y descarga las aplicaciones de BioKaizen Solutions. Tecnología que crece contigo." />
+<style>
+  /* ---------- Tokens ---------- */
+  :root {
+    --bg-deep:      #0a1f1c;
+    --bg-mid:       #0e2b2e;
+    --bg-teal:      #123a3d;
+    --emerald:      #3ecf8e;
+    --emerald-hi:   #6ef2b0;
+    --cyan:         #4db8d8;
+    --cyan-hi:      #7fd4ec;
+    --silver:       #d4dde0;
+    --text:         #e8f1f0;
+    --text-dim:     #93aeb0;
+    --line:         rgba(78,207,142,0.18);
+    --card:         rgba(255,255,255,0.035);
+    --card-brd:     rgba(120,200,180,0.14);
+    --radius:       18px;
+    --maxw:         1180px;
+    --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+    --font-body:    "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior:smooth; }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--text);
+    background:
+      radial-gradient(1200px 700px at 50% -8%, rgba(62,207,142,0.10), transparent 60%),
+      radial-gradient(900px 600px at 90% 30%, rgba(77,184,216,0.10), transparent 55%),
+      linear-gradient(160deg, var(--bg-deep) 0%, var(--bg-mid) 45%, var(--bg-teal) 100%);
+    min-height:100vh;
+    overflow-x:hidden;
+    line-height:1.55;
+  }
+
+  a { color:inherit; text-decoration:none; }
+
+  /* ---------- Circuit backdrop ---------- */
+  .circuit {
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    opacity:0.5;
+    background-image:
+      linear-gradient(rgba(78,207,142,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(77,184,216,0.05) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(circle at 50% 40%, #000 0%, transparent 78%);
+    -webkit-mask-image: radial-gradient(circle at 50% 40%, #000 0%, transparent 78%);
+  }
+  .spark { position:fixed; z-index:0; width:4px; height:4px; border-radius:50%;
+           background:var(--emerald); box-shadow:0 0 8px var(--emerald); opacity:.5;
+           animation: float 9s ease-in-out infinite; pointer-events:none; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-16px)} }
+
+  /* lienzo de partículas */
+  #particles { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+  /* --- HUD del mini-juego de partículas (en el header) --- */
+  #gameHud {
+    display:flex; align-items:center; gap:16px;
+    padding:11px 22px; border-radius:999px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--card-brd);
+    font-size:14.5px; color:var(--text-dim); cursor:default;
+  }
+  #gameHud .hud-i { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+  #gameHud b { color:var(--emerald-hi); font-variant-numeric:tabular-nums; font-weight:700; min-width:2.5ch; text-align:center; }
+  #gameHud .hud-hint { color:var(--text-dim); opacity:.85; }
+  #gameHud .hud-sep { width:1px; height:16px; background:var(--card-brd); }
+  @media(max-width:1080px){ #gameHud .hud-hint{ display:none; } }
+  @media(max-width:760px){ #gameHud{ display:none; } }
+
+  .pWin-overlay {
+    position:fixed; z-index:40; inset:0; display:grid; place-items:center;
+    background:rgba(6,20,18,.6); backdrop-filter:blur(6px);
+    opacity:0; pointer-events:none; transition:opacity .35s ease;
+  }
+  .pWin-overlay.show { opacity:1; pointer-events:auto; }
+  .pWin-card {
+    text-align:center; padding:40px 36px; border-radius:22px; max-width:380px; margin:20px;
+    background:
+      radial-gradient(300px 160px at 50% 0%, rgba(62,207,142,.2), transparent 70%),
+      rgba(14,43,46,.95);
+    border:1px solid var(--card-brd); box-shadow:0 24px 60px rgba(0,0,0,.5);
+    transform:scale(.85); transition:transform .4s ease;
+  }
+  .pWin-overlay.show .pWin-card { transform:scale(1); }
+  .pWin-card h3 { font-family:var(--font-display); font-size:26px; margin-bottom:8px; }
+  .pWin-card .grad { background:linear-gradient(100deg,var(--emerald),var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .pWin-card p { color:var(--text-dim); margin-bottom:20px; }
+  .pWin-card .pWin-time { color:var(--emerald-hi); font-weight:700; }
+
+  .wrap { max-width:var(--maxw); margin:0 auto; padding:0 24px; position:relative; z-index:1; }
+
+  /* ---------- Header ---------- */
+  header {
+    position:sticky; top:0; z-index:20;
+    backdrop-filter: blur(10px);
+    background: rgba(10,31,28,0.55);
+    border-bottom:1px solid var(--line);
+  }
+  .nav { display:flex; align-items:center; justify-content:space-between; gap:20px; height:74px; }
+  .brand { display:flex; align-items:center; gap:12px; font-family:var(--font-display); font-weight:700; letter-spacing:.3px; }
+  .mark {
+    width:38px; height:38px; border-radius:10px;
+    display:grid; place-items:center; font-weight:700; font-size:16px;
+    background: linear-gradient(140deg, #e9f2f2, #9fb6b8);
+    color:#0e2b2e; box-shadow:0 0 0 1px rgba(255,255,255,.15), 0 6px 18px rgba(0,0,0,.35);
+  }
+  .brand b { color:var(--silver); }
+  .brand .k { color:var(--emerald); }
+  .brand .s { color:var(--cyan); }
+  .nav-links { display:flex; gap:26px; font-size:14px; color:var(--text-dim); }
+  .nav-links a:hover { color:var(--emerald-hi); }
+  @media(max-width:640px){ .nav-links{ display:none; } }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 120px 0 96px; text-align:center; position:relative;
+    isolation:isolate;
+  }
+  /* logo de marca como fondo del hero */
+  .hero::before {
+    content:""; position:absolute; z-index:-1;
+    top:-68px; left:50%; transform:translateX(-50%);
+    width:min(1100px, 118%); aspect-ratio:16/9;
+    background:url("logo.webp") center/contain no-repeat;
+    opacity:.28;
+    -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent 82%);
+    mask-image: radial-gradient(closest-side, #000 55%, transparent 82%);
+    pointer-events:none;
+  }
+  /* velo para asegurar legibilidad del texto sobre el logo */
+  .hero::after {
+    content:""; position:absolute; z-index:-1; inset:0;
+    background: radial-gradient(60% 55% at 50% 46%, rgba(10,31,28,.55), transparent 75%);
+    pointer-events:none;
+  }
+  .eyebrow {
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12.5px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--emerald-hi); border:1px solid var(--line); border-radius:999px;
+    padding:7px 16px; margin-bottom:26px;
+  }
+  .eyebrow .dot { width:7px; height:7px; border-radius:50%; background:var(--emerald);
+                  box-shadow:0 0 10px var(--emerald); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .hero h1 {
+    font-family:var(--font-display); font-weight:700;
+    font-size: clamp(38px, 6vw, 68px); line-height:1.03; letter-spacing:-1px;
+    margin-bottom:20px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(100deg, var(--emerald) 0%, var(--cyan) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero p {
+    max-width:600px; margin:0 auto 34px; color:var(--text-dim);
+    font-size: clamp(16px, 2vw, 19px);
+  }
+  .hero-copy { margin-top: clamp(180px, 26vw, 360px); position:relative; }
+  .hero-cta { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .btn {
+    display:inline-flex; align-items:center; gap:9px;
+    padding:13px 24px; border-radius:12px; font-weight:600; font-size:15px;
+    transition: transform .15s ease, box-shadow .15s ease, background .2s;
+  }
+  .btn-primary {
+    background: linear-gradient(100deg, var(--emerald), var(--cyan));
+    color:#06201c; box-shadow:0 8px 26px rgba(62,207,142,.28);
+  }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 12px 34px rgba(62,207,142,.4); }
+  .btn-ghost { border:1px solid var(--card-brd); color:var(--text); }
+  .btn-ghost:hover { border-color:var(--emerald); color:var(--emerald-hi); }
+
+  /* growing line under hero, echoing the logo */
+  .grow-line { height:2px; width:min(560px,80%); margin:52px auto 0;
+    background: linear-gradient(90deg, transparent, var(--emerald), var(--cyan), transparent);
+    border-radius:2px; box-shadow:0 0 22px rgba(62,207,142,.5); }
+
+  /* ---------- Section head ---------- */
+  .sec { padding: 74px 0; }
+  .sec-head { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:40px; flex-wrap:wrap; }
+  .sec-head h2 { font-family:var(--font-display); font-weight:700; font-size:clamp(26px,3.4vw,38px); letter-spacing:-.5px; }
+  .sec-head span { color:var(--emerald); }
+  .sec-head .count { color:var(--text-dim); font-size:14px; }
+
+  /* ---------- App grid ---------- */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(290px,1fr)); gap:24px; perspective:1000px; max-width:1000px; margin:0 auto; }
+  @media(min-width:960px){ .grid{ grid-template-columns:repeat(3,1fr); } }
+
+  .app {
+    position:relative; overflow:hidden;
+    background:
+      linear-gradient(rgba(11,32,29,0.82), rgba(11,32,29,0.82)),
+      var(--card);
+    border:1px solid var(--card-brd);
+    border-radius:var(--radius); padding:26px;
+    display:flex; flex-direction:column; gap:18px;
+    transition: transform .12s ease, border-color .2s ease, box-shadow .2s ease;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .app > * { transform: translateZ(20px); }
+  .app > .app-header { transform: translateZ(10px); }
+  .app::before {
+    content:""; position:absolute; left:0; top:0; height:3px; width:100%;
+    background:linear-gradient(90deg, var(--emerald), var(--cyan));
+    opacity:0; transition:opacity .25s;
+  }
+  .app:hover { border-color:var(--emerald); box-shadow:0 22px 50px rgba(0,0,0,.45); }
+  .app:hover::before { opacity:1; }
+  /* la tarjeta "añadir" no debe inclinarse */
+  .app.add { transform:none !important; }
+  @media (hover:none){ .app{ transform:none !important; } }
+
+  /* --- Cabecera de ficha con logo --- */
+  .app-header {
+    position:relative; margin:-26px -26px 4px; padding:26px 26px 20px;
+    display:flex; align-items:center; gap:16px;
+    background:
+      radial-gradient(120px 80px at 22% 40%, rgba(62,207,142,.18), transparent 70%),
+      radial-gradient(140px 90px at 80% 60%, rgba(77,184,216,.16), transparent 72%),
+      rgba(255,255,255,0.02);
+    border-bottom:1px solid var(--card-brd);
+    overflow:hidden;
+  }
+  /* raíz de circuito decorativa en la cabecera */
+  .app-header::after{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image:
+      linear-gradient(90deg, rgba(77,184,216,.10) 1px, transparent 1px),
+      linear-gradient(rgba(62,207,142,.08) 1px, transparent 1px);
+    background-size:22px 22px;
+    mask-image:linear-gradient(180deg,#000,transparent);
+    -webkit-mask-image:linear-gradient(180deg,#000,transparent);
+  }
+  .app-logo {
+    position:relative; z-index:1; flex-shrink:0;
+    width:66px; height:66px; border-radius:16px; overflow:hidden;
+    display:grid; place-items:center;
+    background:linear-gradient(140deg, var(--emerald-hi), var(--cyan));
+    box-shadow:0 8px 20px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.12) inset;
+    font-size:30px; color:#06201c; font-weight:700;
+  }
+  .app-logo img { width:100%; height:100%; object-fit:cover; display:block; }
+  /* logo de misterio para apps próximamente */
+  .app-logo.mystery {
+    overflow:visible;
+    background:linear-gradient(140deg, #14343a, #0e2b2e);
+    box-shadow:0 8px 20px rgba(0,0,0,.45), 0 0 0 1px rgba(120,200,180,.18) inset;
+    color:var(--emerald-hi);
+  }
+  .app-logo.mystery svg { width:34px; height:34px; filter:drop-shadow(0 0 6px rgba(62,207,142,.6)); }
+  .app-logo.mystery::after {
+    content:""; position:absolute; inset:0; border-radius:16px;
+    box-shadow:0 0 0 0 rgba(62,207,142,.4);
+    animation: mysteryPulse 2.6s ease-out infinite;
+  }
+  @keyframes mysteryPulse {
+    0%   { box-shadow:0 0 0 0 rgba(62,207,142,.35); }
+    70%  { box-shadow:0 0 0 12px rgba(62,207,142,0); }
+    100% { box-shadow:0 0 0 0 rgba(62,207,142,0); }
+  }
+  .app-head-text { position:relative; z-index:1; }
+  .app-title { font-family:var(--font-display); font-weight:700; font-size:19px; }
+  .app-cat { font-size:12px; color:var(--emerald); letter-spacing:.4px; text-transform:uppercase; }
+
+  .app-desc { color:var(--text-dim); font-size:14.5px; flex:1; }
+
+  .app-meta { display:flex; gap:16px; font-size:13px; color:var(--text-dim); }
+  .app-meta b { color:var(--text); font-weight:600; }
+
+  .app-actions { display:flex; gap:10px; margin-top:2px; }
+  .store {
+    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px; border-radius:11px; font-size:14px; font-weight:600;
+    border:1px solid var(--card-brd); transition: background .2s, border-color .2s, color .2s;
+  }
+  .store.play { background:linear-gradient(100deg, rgba(62,207,142,.16), rgba(77,184,216,.16)); }
+  .store:hover { border-color:var(--emerald); color:var(--emerald-hi); }
+  .store.disabled { opacity:.45; pointer-events:none; }
+
+  .badge-soon {
+    position:absolute; z-index:2; top:16px; right:16px; font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--cyan-hi); border:1px solid var(--card-brd); border-radius:999px; padding:4px 10px;
+    background:rgba(10,31,28,.75);
+  }
+
+  /* placeholder "add app" card */
+  .app.add {
+    align-items:center; justify-content:center; text-align:center;
+    border-style:dashed; color:var(--text-dim); min-height:220px; gap:10px;
+  }
+  .app.add .plus { font-size:34px; color:var(--emerald); }
+
+  /* ---------- CTA band ---------- */
+  .band {
+    margin:20px 0 0; border-radius:24px; padding:52px 40px; text-align:center;
+    background:
+      radial-gradient(600px 240px at 50% 0%, rgba(62,207,142,.14), transparent 70%),
+      rgba(255,255,255,0.03);
+    border:1px solid var(--card-brd);
+  }
+  .band h2 { font-family:var(--font-display); font-size:clamp(24px,3vw,34px); margin-bottom:12px; }
+  .band p { color:var(--text-dim); max-width:520px; margin:0 auto 26px; }
+
+  /* ---------- Footer ---------- */
+  footer { border-top:1px solid var(--line); margin-top:80px; padding:40px 0; }
+  .foot { display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; color:var(--text-dim); font-size:13.5px; }
+  .foot a:hover { color:var(--emerald-hi); }
+  .foot-links { display:flex; gap:22px; }
+
+  svg.ic { width:18px; height:18px; }
+</style>
+</head>
+<body>
+
+<div class="circuit"></div>
+<canvas id="particles"></canvas>
+
+<!-- Mensaje de victoria -->
+<div class="pWin-overlay" id="pWin">
+  <div class="pWin-card">
+    <h3>¡Todas <span class="grad">unidas!</span></h3>
+    <p>Lo lograste en <span class="pWin-time">00:00</span>.<br>Como en BioKaizen: pequeños pasos que convergen.</p>
+    <button class="btn btn-primary" id="pReplay">Jugar otra vez</button>
+  </div>
+</div>
+<div class="spark" style="top:22%; left:14%"></div>
+<div class="spark" style="top:34%; left:82%; animation-delay:1.5s"></div>
+<div class="spark" style="top:64%; left:24%; animation-delay:3s"></div>
+<div class="spark" style="top:72%; left:70%; animation-delay:2s"></div>
+
+<!-- ===== Header ===== -->
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <div class="mark">BK</div>
+      <span><b>Bio</b><span class="k">Kaizen</span> <span class="s">Solutions</span></span>
+    </div>
+
+    <!-- HUD del mini-juego de partículas -->
+    <div id="gameHud">
+      <span class="hud-i">✦ Sin unir: <b id="pCounter">—</b></span>
+      <span class="hud-sep"></span>
+      <span class="hud-i">⏱ <b id="pTimer">00:00</b></span>
+      <span class="hud-sep"></span>
+      <span class="hud-i">🏆 <b id="pBest">—</b></span>
+      <span class="hud-sep"></span>
+      <span class="hud-i hud-hint">Agrupa las partículas con el cursor</span>
+    </div>
+
+    <nav class="nav-links">
+      <a href="#apps">Apps</a>
+      <a href="#nosotros">Nosotros</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero wrap">
+  <div class="hero-copy">
+    <span class="eyebrow"><span class="dot"></span> Tecnología que crece contigo</span>
+    <h1>Nuestras apps,<br><span class="grad">en un solo lugar.</span></h1>
+    <p>En BioKaizen Solutions construimos herramientas que mejoran poco a poco, cada día. Explora nuestras aplicaciones y descárgalas donde prefieras.</p>
+    <div class="hero-cta">
+      <a href="#apps" class="btn btn-primary">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        Ver las apps
+      </a>
+      <a href="#contacto" class="btn btn-ghost">Contáctanos</a>
+    </div>
+  </div>
+  <div class="grow-line"></div>
+</section>
+
+<!-- ===== Apps ===== -->
+<section class="sec wrap" id="apps">
+  <div class="sec-head">
+    <h2>Aplicaciones <span>publicadas</span></h2>
+    <span class="count">Actualizado continuamente · <em>Kaizen</em></span>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===== Ficha lateral izquierda — Próximamente (misterio) ===== -->
+    <article class="app">
+      <span class="badge-soon">Próximamente</span>
+      <div class="app-header">
+        <div class="app-logo mystery">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="6" width="12" height="12" rx="2.5"/>
+            <path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2"/>
+            <path d="M10.4 10.2a1.7 1.7 0 1 1 2.4 1.9c-.7.4-1 .7-1 1.4"/>
+            <circle cx="11.9" cy="15.4" r=".5" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <div class="app-head-text">
+          <div class="app-title">Algo se cuece</div>
+          <div class="app-cat">Muy pronto</div>
+        </div>
+      </div>
+      <p class="app-desc">Estamos cultivando una nueva app. Aún es un secreto, pero pronto crecerá aquí. Vuelve para descubrirla.</p>
+      <div class="app-meta">
+        <span>🔒 <b>En desarrollo</b></span>
+        <span>📅 <b>2026</b></span>
+      </div>
+      <div class="app-actions">
+        <a class="store disabled">Google Play</a>
+        <a class="store disabled">iOS</a>
+      </div>
+    </article>
+
+    <!-- Ejemplo 2 -->
+    <article class="app">
+      <div class="app-header">
+        <!-- Ejemplo con imagen de logo (descomenta y ajusta la ruta):
+        <div class="app-logo"><img src="logos/miapp.png" alt="Otra App"></div> -->
+        <div class="app-logo">📊</div>
+        <div class="app-head-text">
+          <div class="app-title">Otra App</div>
+          <div class="app-cat">Productividad</div>
+        </div>
+      </div>
+      <p class="app-desc">Segunda ficha de ejemplo. Sustituye el texto, el icono (emoji o imagen) y los enlaces por los de tu aplicación real.</p>
+      <div class="app-meta">
+        <span>⭐ <b>4.6</b></span>
+        <span>⬇️ <b>500+</b></span>
+        <span>📦 <b>8 MB</b></span>
+      </div>
+      <div class="app-actions">
+        <a href="#" class="store play" target="_blank" rel="noopener">
+          <svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l14 9-14 9V3z"/></svg>
+          Google Play
+        </a>
+        <a href="#" class="store disabled">iOS pronto</a>
+      </div>
+    </article>
+
+    <!-- ===== Ficha lateral derecha — Próximamente (misterio) ===== -->
+    <article class="app">
+      <span class="badge-soon">Próximamente</span>
+      <div class="app-header">
+        <div class="app-logo mystery">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M10.7 11a1.4 1.4 0 1 1 2 1.5c-.5.3-.8.6-.8 1.1"/>
+            <circle cx="11.9" cy="15" r=".45" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <div class="app-head-text">
+          <div class="app-title">Próxima idea</div>
+          <div class="app-cat">Sin revelar</div>
+        </div>
+      </div>
+      <p class="app-desc">Otra pieza del ecosistema BioKaizen está en camino. Los detalles llegarán pronto; de momento, es un misterio.</p>
+      <div class="app-meta">
+        <span>🔒 <b>En desarrollo</b></span>
+        <span>📅 <b>2026</b></span>
+      </div>
+      <div class="app-actions">
+        <a class="store disabled">Google Play</a>
+        <a class="store disabled">iOS</a>
+      </div>
+    </article>
+
+    <!-- ============================================================= -->
+    <!-- PLANTILLA — copia este bloque (quita los comentarios) para    -->
+    <!-- añadir una app publicada. Ponla donde quieras dentro de .grid -->
+    <!-- =============================================================
+    <article class="app">
+      <div class="app-header">
+        <div class="app-logo"><img src="logos/tuapp.png" alt="Nombre"></div>
+        <div class="app-head-text">
+          <div class="app-title">Nombre de tu App</div>
+          <div class="app-cat">Categoría</div>
+        </div>
+      </div>
+      <p class="app-desc">Descripción breve de la app y por qué descargarla.</p>
+      <div class="app-meta">
+        <span>⭐ <b>4.8</b></span>
+        <span>⬇️ <b>1K+</b></span>
+        <span>📦 <b>12 MB</b></span>
+      </div>
+      <div class="app-actions">
+        <a href="URL_DE_GOOGLE_PLAY" class="store play" target="_blank" rel="noopener">
+          <svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l14 9-14 9V3z"/></svg>
+          Google Play
+        </a>
+        <a href="URL_WEB" class="store" target="_blank" rel="noopener">Web</a>
+      </div>
+    </article>
+    ============ FIN PLANTILLA ============ -->
+
+  </div>
+</section>
+
+<!-- ===== Nosotros / CTA ===== -->
+<section class="sec wrap" id="nosotros">
+  <div class="band">
+    <h2>Kaizen: mejora continua</h2>
+    <p>Cada versión que lanzamos es un paso más. Nuestras apps evolucionan escuchando a quienes las usan — como una raíz que sigue creciendo.</p>
+    <a href="#contacto" class="btn btn-primary">Sugiérenos una idea</a>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer id="contacto">
+  <div class="wrap foot">
+    <div class="brand">
+      <div class="mark">BK</div>
+      <span><b>Bio</b><span class="k">Kaizen</span> <span class="s">Solutions</span></span>
+    </div>
+    <nav class="foot-links">
+      <a href="mailto:hola@biokaizen.com">Email</a>
+      <a href="#apps">Apps</a>
+      <a href="#">Privacidad</a>
+    </nav>
+    <span>© 2026 BioKaizen Solutions</span>
+  </div>
+</footer>
+
+<script>
+/* --- Partículas + mini-juego: reúnelas todas en una --- */
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.getElementById('particles');
+  if (!canvas || reduce) { if(canvas) canvas.style.display='none'; var hud=document.getElementById('gameHud'); if(hud) hud.style.display='none'; return; }
+  var ctx = canvas.getContext('2d');
+  var particles = [], mouse = { x:null, y:null, down:false }, lastMove = Date.now();
+  var COLORS = ['62,207,142', '77,184,216', '110,242,176'];
+  var LINK = 120;          // distancia para dibujar línea / considerar conexión
+  var WIN_SPREAD = 90;     // todas deben caber en un radio pequeño para ganar
+
+  // HUD
+  var counterEl = document.getElementById('pCounter');
+  var timerEl   = document.getElementById('pTimer');
+  var winEl     = document.getElementById('pWin');
+  var bestEl    = document.getElementById('pBest');
+  var replayEl  = document.getElementById('pReplay');
+
+  var startTime = null, won = false, elapsed = 0;
+  var best = null; // récord en memoria de la sesión
+
+  function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+
+  function pointer(e){
+    var t = e.touches ? e.touches[0] : e;
+    mouse.x = t.clientX; mouse.y = t.clientY; lastMove = Date.now();
+    if (startTime === null && !won) startTime = Date.now();
+  }
+  addEventListener('mousemove', pointer);
+  addEventListener('touchmove', function(e){ pointer(e); }, {passive:true});
+  addEventListener('mousedown', function(e){ mouse.down=true; pointer(e); });
+  addEventListener('mouseup',   function(){ mouse.down=false; });
+  addEventListener('touchstart',function(e){ mouse.down=true; pointer(e); }, {passive:true});
+  addEventListener('touchend',  function(){ mouse.down=false; mouse.x=mouse.y=null; });
+  addEventListener('mouseout',  function(){ mouse.x=mouse.y=null; });
+  function idle(){ return Date.now() - lastMove > 2000; }
+
+  function Particle(){
+    this.x = Math.random()*canvas.width;
+    this.y = Math.random()*canvas.height;
+    this.vx = (Math.random()-0.5)*0.7;
+    this.vy = (Math.random()-0.5)*0.7;
+    this.size = 1.6 + Math.random()*1.8;
+    this.color = COLORS[(Math.random()*COLORS.length)|0];
+    this.alpha = 0.4 + Math.random()*0.4;
+    this.nX = Math.random()*1000; this.nY = Math.random()*1000;
+  }
+  Particle.prototype.noise = function(x){ return Math.sin(x)*0.5 + Math.sin(x*2.3)*0.25 + Math.sin(x*5.7)*0.125; };
+  Particle.prototype.update = function(){
+    // deriva suave cuando no hay ratón
+    if (idle()){
+      this.nX += 0.005; this.nY += 0.005;
+      this.vx += this.noise(this.nX)*0.10;
+      this.vy += this.noise(this.nY)*0.10;
+    }
+    // el ratón REPELE (como el original): las partículas huyen del cursor
+    if (mouse.x != null){
+      var dx = this.x - mouse.x, dy = this.y - mouse.y, d = Math.sqrt(dx*dx+dy*dy);
+      var range = 130;
+      if (d < range && d > 0){
+        var f = (range - d) / range;
+        this.vx += (dx/d) * 0.25 * f;
+        this.vy += (dy/d) * 0.25 * f;
+      }
+    }
+    var sp = Math.sqrt(this.vx*this.vx+this.vy*this.vy), max = 2;
+    if (sp>max){ this.vx=(this.vx/sp)*max; this.vy=(this.vy/sp)*max; }
+    this.x += this.vx; this.y += this.vy;
+    if (this.x<0||this.x>canvas.width) this.vx*=-1;
+    if (this.y<0||this.y>canvas.height) this.vy*=-1;
+    this.x = Math.max(0, Math.min(canvas.width, this.x));
+    this.y = Math.max(0, Math.min(canvas.height, this.y));
+    this.vx*=0.96; this.vy*=0.96;
+  };
+  Particle.prototype.draw = function(){
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba('+this.color+','+this.alpha+')';
+    ctx.fill();
+  };
+
+  var COUNT = innerWidth < 700 ? 30 : 55;
+  function reset(){
+    particles = [];
+    for (var i=0;i<COUNT;i++) particles.push(new Particle());
+    startTime = null; won = false; elapsed = 0;
+    if (winEl) winEl.classList.remove('show');
+  }
+  reset();
+
+  function connect(){
+    for (var i=0;i<particles.length;i++){
+      for (var j=i+1;j<particles.length;j++){
+        var a=particles[i], b=particles[j];
+        var dx=a.x-b.x, dy=a.y-b.y, d=Math.sqrt(dx*dx+dy*dy);
+        if (d < LINK){
+          var op = 0.16*(1-d/LINK);
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(62,207,142,'+op+')';
+          ctx.lineWidth = 0.7;
+          ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // tamaño del mayor grupo conectado (BFS con distancia LINK)
+  function largestComponent(){
+    var n = particles.length, visited = new Array(n).fill(false), maxS = 0;
+    var LSq = LINK*LINK;
+    for (var i=0;i<n;i++){
+      if (visited[i]) continue;
+      var stack=[i], size=0;
+      while(stack.length){
+        var c=stack.pop();
+        if (visited[c]) continue;
+        visited[c]=true; size++;
+        for (var j=0;j<n;j++){
+          if (!visited[j]){
+            var dx=particles[c].x-particles[j].x, dy=particles[c].y-particles[j].y;
+            if (dx*dx+dy*dy < LSq) stack.push(j);
+          }
+        }
+      }
+      if (size>maxS) maxS=size;
+    }
+    return maxS;
+  }
+  function maxSpread(){
+    var m=0;
+    for (var i=0;i<particles.length;i++)
+      for (var j=i+1;j<particles.length;j++){
+        var dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+        var d=Math.sqrt(dx*dx+dy*dy); if (d>m) m=d;
+      }
+    return m;
+  }
+
+  function fmt(ms){
+    var s = Math.floor(ms/1000), m = Math.floor(s/60);
+    s = s%60;
+    return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  }
+
+  function updateHud(){
+    var largest = largestComponent();
+    var loose = particles.length - largest;
+    if (counterEl) counterEl.textContent = loose;
+
+    if (!won){
+      if (startTime !== null){ elapsed = Date.now()-startTime; if (timerEl) timerEl.textContent = fmt(elapsed); }
+      // victoria: todas en un grupo y muy juntas
+      if (largest === particles.length && maxSpread() < WIN_SPREAD){
+        won = true;
+        if (best === null || elapsed < best){ best = elapsed; }
+        if (bestEl) bestEl.textContent = best!==null ? fmt(best) : '—';
+        if (winEl){
+          winEl.querySelector('.pWin-time').textContent = fmt(elapsed);
+          winEl.classList.add('show');
+        }
+      }
+    }
+  }
+
+  if (replayEl) replayEl.addEventListener('click', function(){ reset(); });
+
+  var frame = 0;
+  function loop(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for (var i=0;i<particles.length;i++){ particles[i].update(); particles[i].draw(); }
+    connect();
+    if ((frame++ % 6) === 0) updateHud();  // no calcular componentes cada frame
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+
+<script>
+/* --- Efecto tilt 3D en las fichas (sigue al ratón) --- */
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var fine   = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (reduce || !fine) return;
+
+  document.querySelectorAll('.app:not(.add)').forEach(function(card){
+    card.addEventListener('mousemove', function(e){
+      var r = card.getBoundingClientRect();
+      var x = e.clientX - r.left, y = e.clientY - r.top;
+      var rotateX = (y - r.height/2) / 14;
+      var rotateY = (r.width/2 - x) / 14;
+      card.style.transform =
+        'rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg) scale(1.04)';
+    });
+    card.addEventListener('mouseleave', function(){
+      card.style.transform = '';
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
