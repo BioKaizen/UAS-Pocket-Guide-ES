@@ -1,6 +1,6 @@
 {
   "nominatim": {
-    "activo": true,
+    "activo": false,
     "url": "https://nominatim.openstreetmap.org",
     "mensaje": "La búsqueda de lugares está desactivada temporalmente. No es un fallo de tu conexión: se reactivará sin necesidad de actualizar la app. Mientras tanto, puedes desplazarte por el mapa o usar tu ubicación (GPS)."
   }
